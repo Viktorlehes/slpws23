@@ -1,0 +1,14 @@
+.wrapper-login
+    .login-container
+        form method="post" action="/login"
+            span.account-login ACCOUNT LOGIN
+            span.username USERNAME
+            .wrapper-input 
+                input type="text" name="username"
+            span.password PASSWORD
+            .wrapper-input 
+                input type="password" name="password"
+            .button-wrapper
+                button.submit-button type="submit" LOGIN
+        h2 if you dont have an acocunt please create one 
+        a.link href="/register" here!
