@@ -12,29 +12,32 @@ end
 
 def getUserByUsername(username)
   db = connectToDb()
-  return db.execute("SELECT * FROM users WHERE username=?", username).first
+  user = db.execute("SELECT * FROM users WHERE username=?", username).first || nil
+  return user
 end
 
 def createUser(username, password, passwordConfirm)
   db = connectToDb()
-  userId = getUserByUsername(username)
+  user = getUserByUsername(username)
+  status = 200
+  session.clear
 
   if username.empty? or password.empty?
     session.delete("error")
     session[:error] = "Please fill in all fields"
-    redirect("/register")
+    return status = 400
   end
 
-  if userId
+  if user
     session.delete("error")
     session[:error] = "User already exists"
-    redirect("/register")
+    return status = 400
   end
 
   if password != passwordConfirm
     session.delete("error")
     session[:error] = "Confirmation password is incorrect"
-    redirect("/register")
+    return status = 400
   end
 
   passwordDigest = BCrypt::Password.create(password)
@@ -42,56 +45,70 @@ def createUser(username, password, passwordConfirm)
     "INSERT INTO users (username, passwordDigest) VALUES (?, ?);",
     [username.downcase, passwordDigest]
   )
-  redirect("/login")
+  return status
 end
 
 def loginUser(username, password)
   db = connectToDb()
-  user = db.execute(
-    "SELECT * FROM users WHERE username = ?;",
-    [username]
-  ).first
+  user = getUserByUsername(username)
+  status = 200
+  session.clear
 
-  if user.empty?
-    session.delete("error")
-    session[:error] = "wrong username or password"
-    redirect("/login")
+  if password == "" || username == ""
+    session[:error] = "please fill in all required fields"
+    return status = 400
   end
 
-  userId = user["userId"]
+  if !user
+    session[:error] = "wrong username or password"
+    return status = 400
+  end
+
   passwordDigest = user["passwordDigest"]
 
   if BCrypt::Password.new(passwordDigest) != password
     session[:error] = "wrong username or password"
-    redirect("/login")
+    return status = 400
   end
 
-  session[:loggedIn] = userId
-  p session[:loggedIn]
-  redirect("/featured")
+  # token = BCrypt::Password.create(user["userId"])
+
+  session[:loggedIn] = user["userId"]
+
+  return status
 end
 
 def getCityCordinatesFromSearch(cityName)
-  uri = URI("http://api.openweathermap.org/geo/1.0/direct?q=#{cityName}&limit=5&appid=9e23271195b29b37c3bac4c4457487cf")
+  status = 200
+
+  if cityName.include?(" ")
+    searchedCity = cityName.split(" ")[0]
+  else
+    searchedCity = cityName
+  end
+
+  uri = URI("http://api.openweathermap.org/geo/1.0/direct?q=#{searchedCity}&limit=5&appid=9e23271195b29b37c3bac4c4457487cf")
   response = Net::HTTP.get(uri)
   weatherData = JSON.parse(response)
+
+  p weatherData
+
+  if weatherData == nil || weatherData == []
+    return latitude = nil, longitude = nil, status = 400
+  end
   latitude = weatherData[1]["lat"]
   longitude = weatherData[1]["lon"]
-  return latitude, longitude unless weatherData == nil
+  return latitude, longitude, status
 end
 
 def getWeatherDataByCordinates(lon, lat)
-  start_time = Time.now
-
   uri = URI("https://api.openweathermap.org/data/2.5/weather?lat=#{lon}&lon=#{lat}&units=metric&appid=8ff21487fbf05de0ac8a7e46b7643b72")
 
   response = Net::HTTP.get(uri)
 
   weatherData = JSON.parse(response)
 
-  end_time = Time.now
-  completionTime = end_time - start_time
-  return weatherData, completionTime
+  return weatherData
 end
 
 def getStandardWeatherData()
@@ -100,24 +117,45 @@ def getStandardWeatherData()
   standard_dashboard_cities = db.execute(
     "SELECT name, lon, lat FROM location"
   )
-  # [{"name"=>"sundsvall", "lon"=>62.383354, "lat"=>17.299768},
-  #  {"name"=>"gothenburg", "lon"=>40.9277324, "lat"=>-100.1619896},
-  #  {"name"=>"lund", "lon"=>55.6932601, "lat"=>13.320832},
-  #  {"name"=>"stockholm", "lon"=>59.3371186, "lat"=>17.9860453},
-  #  {"name"=>"halmstad", "lon"=>56.6999786, "lat"=>12.8668829},
-  #  {"name"=>"karlstad", "lon"=>59.516667, "lat"=>13.8}]
 
   standard_dashboard_data = []
 
   standard_dashboard_cities.each do |city|
-    uri = URI("https://api.openweathermap.org/data/2.5/weather?lat=#{city["lon"]}&lon=#{city["lat"]}&units=metric&appid=8ff21487fbf05de0ac8a7e46b7643b72")
+    if city["name"] == "sundsvall kommun" or city["name"] == "gothenburg" or city["name"] == "lund municipality" or city["name"] == "stockholm" or city["name"] == "halmstad" or city["name"] == "karlstad"
+      uri = URI("https://api.openweathermap.org/data/2.5/weather?lat=#{city["lon"]}&lon=#{city["lat"]}&units=metric&appid=8ff21487fbf05de0ac8a7e46b7643b72")
 
-    response = Net::HTTP.get(uri)
+      response = Net::HTTP.get(uri)
 
-    weatherData = JSON.parse(response)
+      weatherData = JSON.parse(response)
 
-    standard_dashboard_data << weatherData
+      standard_dashboard_data << weatherData
+    end
   end
 
   return standard_dashboard_data
+end
+
+def getGothenburgWeather()
+  weatherData = getWeatherDataByCordinates(40.9277324, -100.1619896)
+  return weatherData
+end
+
+def optimizeTempforArray(standardDashboardData)
+  roundedDashboardData = standardDashboardData
+
+  roundedDashboardData.each do |data|
+    realTemp = data["main"]["temp"].round(0)
+    feelsLike = data["main"]["feels_like"].round(0)
+    data["main"]["temp"] = realTemp
+    data["main"]["feels_like"] = feelsLike
+  end
+  return roundedDashboardData
+end
+
+def optimizeTempForHash(data)
+  realTemp = data["main"]["temp"].round(0)
+  feelsLike = data["main"]["feels_like"].round(0)
+  data["main"]["temp"] = realTemp
+  data["main"]["feels_like"] = feelsLike
+  return data
 end

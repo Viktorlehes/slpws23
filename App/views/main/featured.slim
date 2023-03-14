@@ -1,0 +1,26 @@
+- link_css("featured.css")
+.body-wrapper-featured
+    section.container-left 
+        div.main-temp #{selectedCityData["main"]["temp"]}°
+        h2.city-name-featured #{selectedCityData["name"]}
+    section.container-right
+        .locations Locations
+        .line
+        .form-wrapper
+            form.featured-selection method="post" action="/featured-selected-city"
+                - dashboard_data.each do |data|
+                    button.item type="submit" name="selected" value="#{data["name"]}" = data["name"]
+        .weather-details 
+            | Weather Details
+        .line
+        .weather-details-wrapper
+            .weather-details-left
+                div.weather-details-all Description 
+                div.weather-details-all Feels Like 
+                div.weather-details-all Humidity 
+                div.weather-details-all Wind
+            .weather-details-right 
+                div class="weather-details-inf weather-details-all" = selectedCityData["weather"][0]["description"]
+                div class="weather-details-inf weather-details-all" = selectedCityData["main"]["feels_like"]
+                div class="weather-details-inf weather-details-all" = "#{selectedCityData["main"]["humidity"]} %"
+                div class="weather-details-inf weather-details-all" = "#{selectedCityData["wind"]["speed"]}  m/s"

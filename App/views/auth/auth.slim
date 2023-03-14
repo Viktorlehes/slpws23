@@ -1,0 +1,32 @@
+- link_css("auth.css")
+section 
+    div class="container #{"active" if !params[:login] or params[:login] == "false"}" 
+        div class="user signinBx"
+            .imgBx 
+                img src="./img/login.jpg" alt="login img"
+            .formBx 
+                form method="post" action="/login" 
+                    h2 Sign in 
+                    - if error != nil 
+                        p = error
+                    input type="text" name="username" placeholder="Username" value=value(:username) /
+                    input type="password" name="password" placeholder="Password" value=value(:password) /
+                    input type="submit" name="submit" value="Login" /
+                    p.signup 
+                    |   Don't have an account ? 
+                    button.auth-switch type="button" onclick="toggleForm();" Sign Up.
+        div class="user signupBx"
+            .formBx
+                form action="register" method="post" 
+                    h2 Create an account
+                    - if error != nil 
+                        p = error
+                    input type="text" name="username_register" placeholder="Username" value=value(:username_register) /
+                    input type="password" name="password_register" placeholder="Create Password" value=value(:password_register) / 
+                    input type="password" name="passwordConfirm" placeholder="Confirm Password" value=value(:password_confirm) /
+                    input type="submit" value="Register" /
+                    p.signup 
+                    |   Already have an account ?
+                    button.auth-switch type="button" onclick="toggleForm();" Sign in.
+            .imgBx 
+                img src="./img/register.jpg" alt="signup img"

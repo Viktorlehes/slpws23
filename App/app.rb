@@ -4,99 +4,170 @@ require "sqlite3"
 require "bcrypt"
 require "rerun"
 require "net/http"
+require "active_support"
 require_relative "components/model.rb"
 
 set :port, 3000
 
+key = SecureRandom.hex(32)
 enable :sessions
+set :session_secret, key
+set :sessions, :expire_after => 2592000
+
+helpers do
+  def link_css(path)
+    css_path = "#{path}"
+    @stylesheet_paths << css_path unless @stylesheet_paths.include?(css_path)
+  end
+
+  def value(key)
+    @values&.fetch(key, "")
+  end
+end
 
 before do
+  @stylesheet_paths = []
   protectedRoutes = ["/dashboard", "/featured"]
-
   if protectedRoutes.include?(request.path_info)
     if !session[:loggedIn]
-      redirect("/login")
+      redirect("/auth")
     end
   end
 end
 
-get("/") do
-  redirect("/login")
-end
+get("/") { redirect("/auth") }
 
-get("/register") do
+get("/auth") do
   if session[:error]
     error = session[:error]
   else
     error = nil
   end
 
-  slim(:register, locals: { error: error })
+  if session[:values]
+    @values = session[:values]
+  else
+    @values = nil
+  end
+
+  if session[:loggedIn]
+    session.delete("loggedIn")
+  end
+
+  slim(:"auth/auth", :layout => :"layouts/layout_registration", locals: { error: error })
 end
 
 post("/register") do
-  username, password, passwordConfirm = params[:username], params[:password], params[:"passwordConfirm"]
-  createUser(username, password, passwordConfirm)
-end
+  username, password, passwordConfirm = params[:username_register].downcase, params[:password_register], params[:"passwordConfirm"]
+  status = createUser(username, password, passwordConfirm)
 
-get("/login") do
-  if session[:error]
-    error = session[:error]
-  else
-    error = nil
-  end
+  session[:values] = { username_register: params[:username_register], password_register: params[:password_register], password_confirm: params[:passwordConfirm] }
 
-  slim(:login, locals: { error: error })
+  redirect("auth")
 end
 
 post("/login") do
-  username = params[:username].downcase.to_s
-  password = params[:password].to_s
+  username = params[:username].downcase
+  password = params[:password]
 
-  loginUser(username, password)
+  status = loginUser(username, password)
+
+  session[:values] = { username: params[:username], password: params[:password] }
+
+  if status == 200
+    redirect("featured")
+  else
+    redirect("auth?login=true")
+  end
 end
 
 get("/logout") do
   session.clear
-  redirect("/login")
-end
-
-get("/dashboard") do
-  slim(:foo)
+  redirect("/auth")
 end
 
 get("/featured") do
-  standard_dashboard_data = getStandardWeatherData()
+  standardDashboardData = getStandardWeatherData()
+  optimizedStandardDashboardData = optimizeTempforArray(standardDashboardData)
+  selectedCity = session[:selectedCity] || "gothenburg"
+  selectedCityData = optimizedStandardDashboardData.find { |index| index["name"].downcase == selectedCity } || optimizedStandardDashboardData[1]
 
-  if session[:selectedCity]
-    selectedCity = session[:selectedCity]
-  else
-    selectedCity = "gothenburg"
-  end
-
-  if selectedCity != "gothenburg"
-    standard_dashboard_data.each do |index|
-      nameOfCity = index["name"]
-      if nameOfCity = selectedCity
-        selectedCityData = index
-      end
-    end
-  else
-    selectedCityData = standard_dashboard_data[1]
-  end
-
-  p selectedCityData
-
-  # mtemp = selectedCityData["main"]["temp"]
-  # feels = selectedCityData["main"]["feels_like"]
-  # humidity = selectedCityData["main"]["humidity"]
-  # description = selectedCityData["weather"][0]["description"]
-
-  slim(:"dashboard", locals: { standard_dashboard_data: standard_dashboard_data, selectedCityData: selectedCityData })
+  slim(:"main/featured", :layout => :"layouts/layout_main", locals: { dashboard_data: optimizedStandardDashboardData, selectedCityData: selectedCityData })
 end
 
 post("/featured-selected-city") do
-  selectedCity = params[:selected]
+  selectedCity = params[:selected].downcase
   session[:selectedCity] = selectedCity
   redirect("/featured")
+end
+
+get("/dashboard") do
+  if params["city"]
+    lon, lat, status = getCityCordinatesFromSearch(params["city"])
+    if status == 200
+      dashboardWeatherData = getWeatherDataByCordinates(lon, lat)
+      dashboardWeatherData["status"] = 200
+      dashboardWeatherData = optimizeTempForHash(dashboardWeatherData)
+    else
+      dashboardWeatherData = {}
+      dashboardWeatherData["status"] = 400
+    end
+  else
+    dashboardWeatherData = getGothenburgWeather()
+    dashboardWeatherData["status"] = 200
+    dashboardWeatherData = optimizeTempForHash(dashboardWeatherData)
+  end
+
+  db = connectToDb()
+
+  saved_locations = db.execute("SELECT name FROM location INNER JOIN ulr ON ulr.locationid = location.id WHERE ulr.userid = ?", [session[:loggedIn]])
+
+  slim(:"main/dashboard", :layout => :"layouts/layout_main", locals: { dashboardWeahterData: dashboardWeatherData, savedLocations: saved_locations })
+end
+
+post("/dashboard") do
+  session["searchedCity"] = params["searchedCity"].downcase
+  redirect("/dashboard?city=#{session["searchedCity"]}")
+end
+
+post("/dashboard-save-city") do
+  saved_city = params["city-save"].downcase
+
+  db = connectToDb()
+
+  city_data = db.execute("INSERT INTO location(name) VALUES($1) 
+                         ON CONFLICT(name) DO UPDATE SET name=excluded.name 
+                         RETURNING id", saved_city)
+
+  city_id = city_data[0]["id"]
+
+  db.prepare("INSERT OR IGNORE INTO ulr(locationId, userId) VALUES ($1, $2)").execute(city_id, session[:loggedIn])
+
+  redirect("/dashboard?city=#{saved_city}")
+end
+
+post("/dashboard-selected-city") do
+  intent_select = params["selected-city-select"]
+  intent_delete = params["selected-city-delete"]
+
+  if intent_select
+    selected_city = params["selected-city-select"]
+
+    redirect("/dashboard?city=#{selected_city}")
+  end
+
+  if intent_delete
+    selected_city = params["selected-city-delete"]
+
+    db = connectToDb()
+
+    location_id_data = db.execute("SELECT id FROM location WHERE name = $1", selected_city)
+    location_id = location_id_data[0]["id"]
+
+    db.prepare("DELETE FROM ulr WHERE locationId = $1 AND userId = $2").execute(location_id, session[:loggedIn])
+
+    redirect("/dashboard?city=gothenburg")
+  end
+
+  redirect("/dashboard")
 end

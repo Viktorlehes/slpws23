@@ -1,0 +1,21 @@
+doctype html
+html lang="en"
+  head
+    meta charset="UTF-8"
+    meta http-equiv="X-UA-Compatible" content="IE=edge"
+    meta name="viewport" content="width=device-width, initial-scale=1.0"
+    link rel="stylesheet" href="/css/style.css"
+    title Weather Report app
+    - @stylesheet_paths.each do |path|
+            link rel="stylesheet" href="/css/#{path}"
+  body
+    script src="./js/auth.js" type="text/javascript".
+    nav.nav 
+      .nav_wrapper
+        .container_left 
+          img.logo(src='./img/logo.png', alt='Logo')
+          h1.page_header WeatherPro
+        .container_right
+          a.nav_navigation(href="/auth?login=true") Login 
+          a.nav_navigation(href="/auth?login=false") Register
+    ==yield

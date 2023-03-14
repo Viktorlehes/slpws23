@@ -1,0 +1,129 @@
+/* body */
+
+.body-wrapper-featured {
+    padding-top: 58px;
+    display: flex;
+    flex-direction: row;
+    color: white;
+}
+
+.container-left {
+    width: 75vw;
+    height: calc(100vh - 58px);
+    display: flex;
+    flex-direction: row;
+    justify-content:flex-start;
+    align-items: end; 
+    background-color: rebeccapurple;
+    background: url("../img/background.png");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+}
+
+div.main-temp{
+    color: white;
+    font-size: 60px;
+    font-weight: 600;
+    padding: 20px 20px 20px 40px;
+    margin-top: 50px;
+    margin-bottom: 50px;
+}
+
+.city-name-featured {
+    color: white;
+    font-size: 50px;
+    padding: 20px;
+    margin-top: 50px;
+    margin-bottom: 50px;
+    font-weight: 600;
+}
+
+.container-right {
+    width: 25vw ;
+    display: flex;
+    padding: 2vw;
+    flex-direction: column;
+    background: linear-gradient(to bottom, #2b5d85, #2c95d9);
+}
+
+.weather-details-wrapper {
+    display: flex;
+    justify-content: space-between;
+    color: white;
+}
+
+.weather-details-inf {
+    text-align: right;
+    color: white;
+}
+
+.line {
+    border-top: 1px solid #91b6d1;
+    margin-bottom: 15px;
+}
+
+.locations { 
+    font-size: 24px;
+    margin-bottom: 11px;
+    font-weight: 600;
+    color: white;
+}
+
+.featured-selection {
+    display: flex;
+    flex-direction: column;
+    margin: 10px;
+    color: white;
+}
+
+.item {
+    all: unset;
+    min-width: 100px;
+    width: min-content;
+    height: min-content;
+    margin-bottom: 15px;
+    font-size: 17px;
+    font-weight: 400;
+    white-space: nowrap;
+    transition: font-weight 0.1s ease-in-out;
+    color: white;
+}
+
+.item:hover {
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.weather-details {
+    font-size: 24px;
+    margin-bottom: 11px;
+    font-weight: 600;
+    color: white;
+} 
+
+.weather-details-all {
+    min-width: 120px;
+    width: min-content;
+    height: min-content;
+    white-space: nowrap;
+    margin-bottom: 15px;
+    font-size: 17px;
+    font-weight: 400;
+    color: white;
+}
+
+.weather-details-left {
+    display: flex;
+    flex-direction: column;
+    margin: 10px;
+    color: white;
+}
+
+
+.weather-details-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    margin: 10px;
+    color: white;
+}

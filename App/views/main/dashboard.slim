@@ -1,0 +1,20 @@
+- link_css("dashboard.css")
+.body-wrapper
+    .weather-data
+        -if dashboardWeahterData["status"] == 200
+            h2 = dashboardWeahterData["name"]
+            p Temp: #{dashboardWeahterData["main"]["temp"]}
+            p Feels Like: #{dashboardWeahterData["main"]["feels_like"]} 
+            p Wind Speed: #{dashboardWeahterData["wind"]["speed"]} M/s
+            p = dashboardWeahterData["weather"][0]["description"]
+            form.dashboard-save-form method="post" action="/dashboard-save-city"
+                button.save-button type="submit" name="city-save" value="#{dashboardWeahterData["name"]}" Save current to favorites
+        -else 
+            p No weather information found
+        form.dashboard-search method="post" action="/dashboard"
+            input.searchbar type="text" name="searchedCity" placeholder="Search for a city here!"         
+    .saved-locations
+        form.featured-selection method="post" action="/dashboard-selected-city"
+            - savedLocations.each do |city|
+                button.item type="submit" name="selected-city-select" value="#{city["name"]}" = city["name"]
+                button.remove type="submit" name="selected-city-delete" value="#{city["name"]}" X
