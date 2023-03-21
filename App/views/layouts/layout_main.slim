@@ -18,4 +18,6 @@ html lang="en"
                     a.nav_navigation href="/logout" Logout  
                     a.nav_navigation href="/dashboard" Dashboard 
                     a.nav_navigation href="/featured" Featured
+                    - if role
+                        a class="nav_navigation red" href="/overview" Overview 
         ==yield

@@ -34,6 +34,10 @@ body {
     color: white;
 }
 
+.red {
+    color: red;
+}
+
 .logo {
     width: 62px;
     height: 58px;

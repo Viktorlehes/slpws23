@@ -1,0 +1,25 @@
+- link_css("overview.css")
+.body_wrapper 
+    div.users 
+        | All Users: 
+    .users-wrapper    
+        - users.each do |user|
+            p.users-change-form 
+                | User Id: #{user["userId"]}
+            p.users-change-form 
+                | Username: #{user["username"]}
+            form.users-change-form action="/overview/edit/#{user["userId"]}" method="post" 
+                    input type="text" placeholder="New username" name="username-edit" / 
+                    input type="submit" value="Submit Changes"
+            form.users-change-form action="/overview/edit/#{user["userId"]}" method="post" 
+                label for="Authentication" Authentication: #{user["auth"]} | Change: 
+                select id="Authentication" name="selected-auth"
+                    option value="admin" 
+                        | Admin 
+                    option value="standard" 
+                        | Standard 
+                input type="submit" value="Submit Changes"
+            form.users-change-form action="/overview/delete/#{user["userId"]}" method="post" 
+                input type="submit" value="Delete User"  
+            div.users-change-form.line
+                

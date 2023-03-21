@@ -20,6 +20,7 @@ def createUser(username, password, passwordConfirm)
   db = connectToDb()
   user = getUserByUsername(username)
   status = 200
+  standardRole = "standard"
   session.clear
 
   if username.empty? or password.empty?
@@ -42,8 +43,8 @@ def createUser(username, password, passwordConfirm)
 
   passwordDigest = BCrypt::Password.create(password)
   db.execute(
-    "INSERT INTO users (username, passwordDigest) VALUES (?, ?);",
-    [username.downcase, passwordDigest]
+    "INSERT INTO users (username, passwordDigest, auth) VALUES (?, ?, ?);",
+    [username.downcase, passwordDigest, standardRole]
   )
   return status
 end
@@ -72,6 +73,12 @@ def loginUser(username, password)
   end
 
   # token = BCrypt::Password.create(user["userId"])
+
+  if user["auth"] == "admin"
+    session[:admin] = true
+  else
+    session[:admin] = false
+  end
 
   session[:loggedIn] = user["userId"]
 
@@ -158,4 +165,26 @@ def optimizeTempForHash(data)
   data["main"]["temp"] = realTemp
   data["main"]["feels_like"] = feelsLike
   return data
+end
+
+def getAllUsers()
+  db = connectToDb()
+  users = db.execute("SELECT * FROM users")
+  return users
+end
+
+def updateRole(userId, new_role)
+  db = connectToDb()
+
+  db.execute("UPDATE users SET auth = ? WHERE userId = ?", [new_role, userId])
+
+  return nil
+end
+
+def updateUsername(userId, new_username)
+  db = connectToDb()
+
+  db.execute("UPDATE users SET username = ? WHERE userId = ?", [new_username, userId])
+
+  return nil
 end

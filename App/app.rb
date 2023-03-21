@@ -7,6 +7,8 @@ require "net/http"
 require "active_support"
 require_relative "components/model.rb"
 
+# var tydlig i dok.
+
 set :port, 3000
 
 key = SecureRandom.hex(32)
@@ -28,8 +30,14 @@ end
 before do
   @stylesheet_paths = []
   protectedRoutes = ["/dashboard", "/featured"]
+  adminRoutes = ["/overview"]
   if protectedRoutes.include?(request.path_info)
     if !session[:loggedIn]
+      redirect("/auth")
+    end
+  end
+  if adminRoutes.include?(request.path_info)
+    if !session[:admin]
       redirect("/auth")
     end
   end
@@ -92,7 +100,8 @@ get("/featured") do
   selectedCity = session[:selectedCity] || "gothenburg"
   selectedCityData = optimizedStandardDashboardData.find { |index| index["name"].downcase == selectedCity } || optimizedStandardDashboardData[1]
 
-  slim(:"main/featured", :layout => :"layouts/layout_main", locals: { dashboard_data: optimizedStandardDashboardData, selectedCityData: selectedCityData })
+  role = session[:admin]
+  slim(:"main/featured", :layout => :"layouts/layout_main", locals: { dashboard_data: optimizedStandardDashboardData, selectedCityData: selectedCityData, role: role })
 end
 
 post("/featured-selected-city") do
@@ -122,7 +131,8 @@ get("/dashboard") do
 
   saved_locations = db.execute("SELECT name FROM location INNER JOIN ulr ON ulr.locationid = location.id WHERE ulr.userid = ?", [session[:loggedIn]])
 
-  slim(:"main/dashboard", :layout => :"layouts/layout_main", locals: { dashboardWeahterData: dashboardWeatherData, savedLocations: saved_locations })
+  role = session[:admin]
+  slim(:"main/dashboard", :layout => :"layouts/layout_main", locals: { dashboardWeahterData: dashboardWeatherData, savedLocations: saved_locations, role: role })
 end
 
 post("/dashboard") do
@@ -170,4 +180,47 @@ post("/dashboard-selected-city") do
   end
 
   redirect("/dashboard")
+end
+
+get("/overview") do
+  role = session[:admin]
+
+  users = getAllUsers()
+
+  slim(:"main/overview", :layout => :"layouts/layout_main", locals: { role: role, users: users })
+end
+
+post("/overview/edit/:userId") do |userId|
+  if params["username-edit"]
+    new_username = params["username-edit"].downcase.strip
+    if new_username != ""
+      if session[:admin]
+        updateUsername(userId, new_username)
+      end
+    end
+  end
+
+  if params["selected-auth"]
+    new_role = params["selected-auth"]
+    if session[:admin]
+      updateRole(userId, new_role)
+    end
+  end
+
+  if params["delete-user"]
+    if session[:admin]
+      deleteUser(userId)
+    end
+  end
+
+  redirect("/overview")
+end
+
+post("/overview/delete/:userId") do |userId|
+  if session[:admin]
+    db = connectToDb()
+    db.execute("DELETE FROM ulr WHERE userId = ?", [userId])
+    db.execute("DELETE FROM users WHERE userId = ?", [userId])
+  end
+  redirect("/overview")
 end

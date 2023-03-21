@@ -1,0 +1,23 @@
+.body_wrapper {
+    padding-top: 65px;
+    display: flex;
+    flex-direction: row;
+    
+}
+
+.users {
+    margin-right: 20px;
+    margin-bottom: 20px;
+    font-size: 23px;
+    font-weight: 600;
+}
+
+.line {
+    background-color: black;
+    width: 400px;
+    height: 2px;
+}
+
+.users-change-form { 
+    margin-top: 10px;
+}
