@@ -1,0 +1,8 @@
+source "https://rubygems.org"
+gem "yard"
+gem "yard-sinatra"
+gem "sinatra"
+gem "slim"
+gem "sqlite3"
+gem "bcrypt"
+gem "rerun"

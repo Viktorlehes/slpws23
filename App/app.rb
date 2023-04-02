@@ -4,10 +4,7 @@ require "sqlite3"
 require "bcrypt"
 require "rerun"
 require "net/http"
-require "active_support"
 require_relative "components/model.rb"
-
-# var tydlig i dok.
 
 set :port, 3000
 
@@ -29,7 +26,7 @@ end
 
 before do
   @stylesheet_paths = []
-  protectedRoutes = ["/dashboard", "/featured"]
+  protectedRoutes = ["/featured"]
   adminRoutes = ["/overview"]
   if protectedRoutes.include?(request.path_info)
     if !session[:loggedIn]
